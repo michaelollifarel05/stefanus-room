@@ -1,0 +1,3 @@
+# Swagger UI's optional Scarf telemetry script is unnecessary for this backend.
+allowBuilds:
+  '@scarf/scarf': false

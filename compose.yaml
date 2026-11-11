@@ -1,0 +1,63 @@
+name: stefanus-login
+
+services:
+  db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: booking
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-booking_local_only}
+      POSTGRES_DB: booking
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - booking_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booking -d booking"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  migrate:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://booking:${POSTGRES_PASSWORD:-booking_local_only}@db:5432/booking
+    command: ["node", "scripts/migrate.js"]
+    depends_on:
+      db:
+        condition: service_healthy
+  api:
+    build: .
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: postgresql://booking:${POSTGRES_PASSWORD:-booking_local_only}@db:5432/booking
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env first}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      SEED_PASSWORD: ${SEED_PASSWORD:-}
+      PORT: 3000
+    ports:
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  test-db:
+    image: postgres:17-bookworm
+    profiles: ["test"]
+    environment:
+      POSTGRES_USER: booking
+      POSTGRES_PASSWORD: booking_local_only
+      POSTGRES_DB: booking_test
+    ports:
+      - "127.0.0.1:5435:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booking -d booking_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+volumes:
+  booking_data:
