@@ -1,4 +1,4 @@
-# St Stefanus — Presentasi Login
+# St Stefanus
 
 Versi tahap pertama: **Node.js 24 + Express 5 + PostgreSQL 17 + Swagger UI standar**.
 
